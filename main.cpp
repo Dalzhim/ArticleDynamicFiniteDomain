@@ -90,7 +90,6 @@ typedef closed_interval_map<DynamicDomain*, int> MapType;
 
 int main(int argc, const char * argv[])
 {
-	MapType::value_type test;
 	std::set<std::unique_ptr<DynamicDomain>> domainSet;
 	domainSet.insert(std::unique_ptr<DynamicDomain>(new DynamicDomain(7, &domainSet)));
 	domainSet.insert(std::unique_ptr<DynamicDomain>(new DynamicDomain(1, &domainSet)));
@@ -101,12 +100,12 @@ int main(int argc, const char * argv[])
 	domainSet.insert(std::unique_ptr<DynamicDomain>(new DynamicDomain(9001, &domainSet)));
 	domainSet.insert(std::unique_ptr<DynamicDomain>(new DynamicDomain(5, &domainSet)));
 	
-	MapType map;
+	MapType intervalMap;
 	std::set<std::unique_ptr<DynamicDomain>>::iterator it = domainSet.begin();
-	map.add(std::make_pair(MapType::interval_type::closed_interval(it->get(), std::next(it, 1)->get()), 1));
-	map.add(std::make_pair(MapType::interval_type::closed_interval(std::next(it, 2)->get(), std::next(it, 3)->get()), 1));
-	map.add(std::make_pair(MapType::interval_type::closed_interval(std::next(it, 1)->get(), std::next(it, 3)->get()), 1));
-	for (auto element : map) {
+	intervalMap.add(std::make_pair(MapType::interval_type::closed_interval(it->get(), std::next(it, 1)->get()), 1));
+	intervalMap.add(std::make_pair(MapType::interval_type::closed_interval(std::next(it, 2)->get(), std::next(it, 3)->get()), 1));
+	intervalMap.add(std::make_pair(MapType::interval_type::closed_interval(std::next(it, 1)->get(), std::next(it, 3)->get()), 1));
+	for (auto element : intervalMap) {
 		std::cout << "Domain: [" << element.first.lower()->intValue << ", " << element.first.upper()->intValue << "] = " << element.second << std::endl;
 	}
 }
