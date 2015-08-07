@@ -14,7 +14,7 @@
 class DynamicDomain
 {
 public:
-	DynamicDomain(int intValue, std::set<DynamicDomain*>* collection);
+	DynamicDomain(int intValue, std::set<std::unique_ptr<DynamicDomain>>* collection);
 	
 	DynamicDomain* getPredecessor();
 	DynamicDomain* getSuccessor();
@@ -22,7 +22,7 @@ public:
 	int intValue;
 	
 private:
-	std::set<DynamicDomain*>* collection;
+	std::set<std::unique_ptr<DynamicDomain>>* collection;
 };
 
 namespace std
@@ -84,34 +84,34 @@ namespace boost { namespace icl { namespace detail {
 }}}
 
 template <typename Domain, typename Codomain, typename Traits = boost::icl::partial_absorber, template<class>class Compare = std::less, template<class>class Combine = boost::icl::inplace_plus, template<class>class Section = boost::icl::inter_section>
-using IntervalMapSimple = boost::icl::interval_map<Domain*, Codomain, Traits, Compare, Combine, Section, boost::icl::closed_interval<Domain*>>;
+using closed_interval_map = boost::icl::interval_map<Domain, Codomain, Traits, Compare, Combine, Section, boost::icl::closed_interval<Domain>>;
 
-typedef IntervalMapSimple<DynamicDomain, int> MapType;
+typedef closed_interval_map<DynamicDomain*, int> MapType;
 
 int main(int argc, const char * argv[])
 {
 	MapType::value_type test;
-	std::set<DynamicDomain*> elements = {
-		new DynamicDomain(7, &elements),
-		new DynamicDomain(1, &elements),
-		new DynamicDomain(2, &elements),
-		new DynamicDomain(6, &elements),
-		new DynamicDomain(3, &elements),
-		new DynamicDomain(4, &elements),
-		new DynamicDomain(9001, &elements),
-		new DynamicDomain(5, &elements)
-	};
+	std::set<std::unique_ptr<DynamicDomain>> domainSet;
+	domainSet.insert(std::unique_ptr<DynamicDomain>(new DynamicDomain(7, &domainSet)));
+	domainSet.insert(std::unique_ptr<DynamicDomain>(new DynamicDomain(1, &domainSet)));
+	domainSet.insert(std::unique_ptr<DynamicDomain>(new DynamicDomain(2, &domainSet)));
+	domainSet.insert(std::unique_ptr<DynamicDomain>(new DynamicDomain(6, &domainSet)));
+	domainSet.insert(std::unique_ptr<DynamicDomain>(new DynamicDomain(3, &domainSet)));
+	domainSet.insert(std::unique_ptr<DynamicDomain>(new DynamicDomain(4, &domainSet)));
+	domainSet.insert(std::unique_ptr<DynamicDomain>(new DynamicDomain(9001, &domainSet)));
+	domainSet.insert(std::unique_ptr<DynamicDomain>(new DynamicDomain(5, &domainSet)));
+	
 	MapType map;
-	std::set<DynamicDomain*>::iterator it = elements.begin();
-	map.add(std::make_pair(MapType::interval_type::closed_interval(*it, *std::next(it, 1)), 1));
-	map.add(std::make_pair(MapType::interval_type::closed_interval(*std::next(it, 2), *std::next(it, 3)), 1));
-	map.add(std::make_pair(MapType::interval_type::closed_interval(*std::next(it, 1), *std::next(it, 3)), 1));
+	std::set<std::unique_ptr<DynamicDomain>>::iterator it = domainSet.begin();
+	map.add(std::make_pair(MapType::interval_type::closed_interval(it->get(), std::next(it, 1)->get()), 1));
+	map.add(std::make_pair(MapType::interval_type::closed_interval(std::next(it, 2)->get(), std::next(it, 3)->get()), 1));
+	map.add(std::make_pair(MapType::interval_type::closed_interval(std::next(it, 1)->get(), std::next(it, 3)->get()), 1));
 	for (auto element : map) {
 		std::cout << "Domain: [" << element.first.lower()->intValue << ", " << element.first.upper()->intValue << "] = " << element.second << std::endl;
 	}
 }
 
-DynamicDomain::DynamicDomain(int intValue, std::set<DynamicDomain*>* collection)
+DynamicDomain::DynamicDomain(int intValue, std::set<std::unique_ptr<DynamicDomain>>* collection)
 : intValue(intValue), collection(collection)
 {}
 
@@ -119,11 +119,13 @@ DynamicDomain*
 DynamicDomain::getPredecessor()
 {
 	DynamicDomain* result;
-	std::set<DynamicDomain*>::iterator it = collection->lower_bound(this);
+	std::set<std::unique_ptr<DynamicDomain>>::iterator it = std::lower_bound(collection->begin(), collection->end(), this, [](const std::unique_ptr<DynamicDomain>& lhs, DynamicDomain* rhs) {
+		return std::less<DynamicDomain*>()(lhs.get(), rhs);
+	});
 	if (it == collection->begin()) {
 		result = nullptr;
 	} else {
-		result = *std::prev(it);
+		result = std::prev(it)->get();
 	}
 	return result;
 }
@@ -132,11 +134,13 @@ DynamicDomain*
 DynamicDomain::getSuccessor()
 {
 	DynamicDomain* result;
-	std::set<DynamicDomain*>::iterator it = std::next(collection->lower_bound(this));
+	std::set<std::unique_ptr<DynamicDomain>>::iterator it = std::next(std::lower_bound(collection->begin(), collection->end(), this, [](const std::unique_ptr<DynamicDomain>& lhs, DynamicDomain* rhs) {
+		return std::less<DynamicDomain*>()(lhs.get(), rhs);
+	}));
 	if (it == collection->end()) {
 		result = nullptr;
 	} else {
-		result = *it;
+		result = it->get();
 	}
 	return result;
 }
